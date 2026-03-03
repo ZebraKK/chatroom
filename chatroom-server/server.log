@@ -1,0 +1,12 @@
+2026/03/03 01:52:38 main.go:20: ==============================================
+2026/03/03 01:52:38 main.go:21:    Terminal Chatroom Server v1.0
+2026/03/03 01:52:38 main.go:22: ==============================================
+2026/03/03 01:52:38 main.go:23: Address:      :8443
+2026/03/03 01:52:38 main.go:24: Certificate:  ./certs/server.crt
+2026/03/03 01:52:38 main.go:25: Key:          ./certs/server.key
+2026/03/03 01:52:38 main.go:26: Data Dir:     ./data
+2026/03/03 01:52:38 main.go:27: ==============================================
+2026/03/03 01:52:38 server.go:84: Loaded 0 users from storage
+2026/03/03 01:52:38 server.go:101: 🚀 Server starting on :8443
+2026/03/03 01:52:38 server.go:102: 📁 Data directory: &{./data data/messages.jsonl data/users.json {{} {%!s(int32=0) %!s(uint32=0)}}}
+2026/03/03 01:52:38 server.go:103: 🔒 TLS cert: ./certs/server.crt
