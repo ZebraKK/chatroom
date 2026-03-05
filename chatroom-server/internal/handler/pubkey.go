@@ -44,12 +44,17 @@ func (h *PubKeyHandler) Handle(client *connection.Client, msg *protocol.Message)
 		}
 	}
 
-	// 响应
+	// 响应（包装成 Message 格式）
 	resp := protocol.PubKeyResponse{
 		Type: "pubkeys",
 		Keys: keys,
 	}
-	data, _ := json.Marshal(resp)
+	respData, _ := json.Marshal(resp)
+	envelope := protocol.Message{
+		Type: "pubkeys",
+		Data: json.RawMessage(respData),
+	}
+	data, _ := json.Marshal(envelope)
 	client.SendChan <- data
 
 	return nil

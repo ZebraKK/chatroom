@@ -23,10 +23,22 @@ func NewManager() *Manager {
 	}
 }
 
-// Register 注册用户（处理用户名冲突）
+// Register 注册用户（支持登录逻辑）
+// 如果用户名已存在且公钥匹配，则视为登录（返回原用户名）
+// 如果用户名已存在但公钥不匹配，则分配新用户名（如 username_1）
 func (m *Manager) Register(username, signingKey, encryptionKey, algorithm string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// 检查用户名是否已存在
+	if existingUser, exists := m.users[username]; exists {
+		// 用户已存在，检查公钥是否匹配
+		if existingUser.SigningKey == signingKey && existingUser.EncryptionKey == encryptionKey {
+			// 公钥匹配，视为登录（复用现有用户）
+			return username, nil
+		}
+		// 公钥不匹配，分配新用户名（用户名冲突）
+	}
 
 	// 查找可用用户名
 	finalUsername := username
@@ -39,7 +51,7 @@ func (m *Manager) Register(username, signingKey, encryptionKey, algorithm string
 		counter++
 	}
 
-	// 创建用户
+	// 创建新用户
 	user := &User{
 		Username:      finalUsername,
 		SigningKey:    signingKey,

@@ -45,7 +45,7 @@ func NewRouter(cm *connection.Manager, um *user.Manager, s storage.Storage) *Rou
 func (r *Router) Route(client *connection.Client, msg *protocol.Message) {
 	handler, ok := r.handlers[msg.Type]
 	if !ok {
-		r.sendError(client, "unknown message type: "+msg.Type)
+		r.sendError(client, ": "+msg.Type)
 		return
 	}
 

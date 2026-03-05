@@ -88,9 +88,57 @@ func (c *Connection) Disconnect() {
 	log.Println("👋 Disconnected from server")
 }
 
-// SendMessage 发送消息
+// SendMessage 发送消息（自动包装为 Message 格式）
 func (c *Connection) SendMessage(msg interface{}) error {
-	data, err := json.Marshal(msg)
+	// 根据消息类型自动推断 type 字段
+	var msgType string
+	var msgData interface{}
+
+	switch v := msg.(type) {
+	case protocol.RegisterRequest:
+		msgType = "register"
+		msgData = v
+	case protocol.ChatMessage:
+		msgType = "message"
+		msgData = v
+	case *protocol.ChatMessage:
+		msgType = "message"
+		msgData = v
+	case protocol.PubKeyRequest:
+		msgType = "get_pubkeys"
+		msgData = v
+	case protocol.HistoryRequest:
+		msgType = "history"
+		msgData = v
+	case protocol.Message:
+		// 如果已经是 Message 类型，直接使用
+		data, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		select {
+		case c.sendChan <- data:
+			return nil
+		case <-time.After(5 * time.Second):
+			return errors.New("send timeout")
+		}
+	default:
+		return errors.New("unknown message type")
+	}
+
+	// 序列化消息数据
+	dataBytes, err := json.Marshal(msgData)
+	if err != nil {
+		return err
+	}
+
+	// 包装成 Message 格式
+	envelope := protocol.Message{
+		Type: msgType,
+		Data: json.RawMessage(dataBytes),
+	}
+
+	data, err := json.Marshal(envelope)
 	if err != nil {
 		return err
 	}

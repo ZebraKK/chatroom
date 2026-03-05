@@ -78,7 +78,14 @@ func (h *MessageHandler) Handle(client *connection.Client, msg *protocol.Message
 			Signature:           chatMsg.Signature,
 		}
 
-		data, _ := json.Marshal(individualMsg)
+		// 包装成 Message 格式
+		msgData, _ := json.Marshal(individualMsg)
+		envelope := protocol.Message{
+			Type: "message",
+			Data: json.RawMessage(msgData),
+		}
+		data, _ := json.Marshal(envelope)
+
 		if err := h.router.GetConnManager().SendToUser(recipient.To, data); err != nil {
 			log.Printf("Failed to send to %s: %v", recipient.To, err)
 		}

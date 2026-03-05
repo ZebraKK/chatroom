@@ -125,13 +125,18 @@ func (s *Server) handleWebSocket(ws *websocket.Conn) {
 		s.connManager.RemoveClient(client.ID)
 		log.Printf("👋 Client disconnected: id=%s, username=%s", client.ID, client.Username)
 
-		// 广播用户下线通知
+		// 广播用户下线通知（包装成 Message 格式）
 		if client.Username != "" {
 			notification := protocol.UserOfflineNotification{
 				Type:     "user_offline",
 				Username: client.Username,
 			}
-			data, _ := json.Marshal(notification)
+			notifyData, _ := json.Marshal(notification)
+			envelope := protocol.Message{
+				Type: "user_offline",
+				Data: json.RawMessage(notifyData),
+			}
+			data, _ := json.Marshal(envelope)
 			s.connManager.Broadcast(data)
 		}
 	}()

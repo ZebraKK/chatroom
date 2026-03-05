@@ -87,21 +87,7 @@ func main() {
 	// 创建消息处理器
 	msgHandler := message.NewHandler(keyPair, cfg.Username)
 
-	// 设置消息回调
-	msgHandler.SetMessageCallback(func(from, plaintext string, timestamp int64) {
-		terminal.ShowMessage(from, plaintext, timestamp)
-	})
-	msgHandler.SetUserOnlineCallback(func(username string) {
-		terminal.ShowUserOnline(username)
-	})
-	msgHandler.SetUserOfflineCallback(func(username string) {
-		terminal.ShowUserOffline(username)
-	})
-
-	// 设置连接的消息处理器
-	conn.SetMessageHandler(msgHandler.HandleMessage)
-
-	// 注册到服务器
+	// 注册到服务器（在设置异步消息处理器之前）
 	fmt.Println("📝 Registering with server...")
 	registerReq := protocol.RegisterRequest{
 		Username:      cfg.Username,
@@ -137,8 +123,43 @@ func main() {
 	if regResp.AssignedUsername != cfg.Username {
 		fmt.Printf("⚠️  Username taken, assigned: %s\n", regResp.AssignedUsername)
 		cfg.Username = regResp.AssignedUsername
-		terminal = ui.New(cfg.Username) // 重新创建 UI
+		msgHandler = message.NewHandler(keyPair, cfg.Username) // 使用新用户名重新创建
+		terminal = ui.New(cfg.Username)                        // 重新创建 UI
 	}
+
+	// 如果有在线用户，请求他们的公钥（在设置异步处理器之前）
+	if len(regResp.OnlineUsers) > 0 {
+		log.Printf("📥 Requesting public keys for %d online users...", len(regResp.OnlineUsers))
+		pubKeyReq := protocol.PubKeyRequest{
+			Type:  "get_pubkeys",
+			Users: regResp.OnlineUsers,
+		}
+		if err := conn.SendMessage(pubKeyReq); err != nil {
+			log.Printf("⚠️  Warning: Failed to request public keys: %v", err)
+		} else {
+			// 等待公钥响应
+			pubKeyResp, err := conn.ReceiveMessage()
+			if err == nil && pubKeyResp.Type == "pubkeys" {
+				// 让消息处理器处理公钥
+				msgHandler.HandleMessage(pubKeyResp)
+				log.Printf("✅ Received public keys for online users")
+			}
+		}
+	}
+
+	// 现在设置异步消息处理器（之前的同步操作已完成）
+	msgHandler.SetMessageCallback(func(from, plaintext string, timestamp int64) {
+		terminal.ShowMessage(from, plaintext, timestamp)
+	})
+	msgHandler.SetUserOnlineCallback(func(username string) {
+		terminal.ShowUserOnline(username)
+	})
+	msgHandler.SetUserOfflineCallback(func(username string) {
+		terminal.ShowUserOffline(username)
+	})
+
+	// 设置连接的消息处理器（从现在开始，所有消息都异步处理）
+	conn.SetMessageHandler(msgHandler.HandleMessage)
 
 	// 显示连接成功
 	terminal.ShowConnected(regResp.OnlineUsers)

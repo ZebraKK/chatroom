@@ -73,14 +73,19 @@ func (h *HistoryHandler) Handle(client *connection.Client, msg *protocol.Message
 		hasMore = true
 	}
 
-	// 响应
+	// 响应（包装成 Message 格式）
 	resp := protocol.HistoryResponse{
 		Type:     "history_response",
 		Messages: filtered,
 		HasMore:  hasMore,
 	}
 
-	data, _ := json.Marshal(resp)
+	respData, _ := json.Marshal(resp)
+	envelope := protocol.Message{
+		Type: "history_response",
+		Data: json.RawMessage(respData),
+	}
+	data, _ := json.Marshal(envelope)
 	client.SendChan <- data
 
 	log.Printf("📜 History query: user=%s, limit=%d, returned=%d, hasMore=%v",
